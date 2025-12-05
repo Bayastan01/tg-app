@@ -1,14 +1,29 @@
 {
   "builds": [
     {
-      "src": "api/bot.py",
-      "use": "@vercel/python"
+      "src": "public/index.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
+      "src": "/",
+      "dest": "/public/index.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "api/bot.py"
+      "dest": "/public/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' data: https: blob:; connect-src 'self' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:;"
+        }
+      ]
     }
   ]
 }

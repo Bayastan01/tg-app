@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -155,6 +155,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             background: rgba(102, 126, 234, 0.05);
+            user-select: none;
         }
         
         .photo-upload:hover, .photo-upload:active {
@@ -583,8 +584,9 @@
             animation: pulse 1.5s ease-in-out infinite;
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
     <!-- Прогресс бар -->
@@ -623,8 +625,8 @@
     </div>
 
     <!-- Уведомления -->
-    <div class="notification" id="notification">
-        <i class="fas fa-exclamation-circle notification-icon"></i>
+    <div class="notification" id="notification" style="transform: translateX(-50%) translateY(-100px);">
+        <i class="fas fa-exclamation-circle notification-icon" id="notificationIcon"></i>
         <div class="notification-content">
             <div class="notification-title" id="notificationTitle">Ошибка</div>
             <div class="notification-message" id="notificationMessage"></div>
@@ -639,9 +641,10 @@
                 <h2 class="step-title"><i class="fas fa-camera"></i> Загрузите фото</h2>
                 <div class="form-group">
                     <div class="photo-upload" id="photoUpload" role="button" aria-label="Загрузить фото">
-                        <i class="fas fa-cloud-upload-alt photo-upload-icon"></i>
-                        <p>Нажмите для загрузки фото</p>
-                        <p class="input-hint">Можно загрузить до 10 фото (максимум 5MB каждое)</p>
+                        <!-- Внутренние элементы, которые обновляем, но не перезаписываем контейнер -->
+                        <i class="fas fa-cloud-upload-alt photo-upload-icon" id="uploadIcon"></i>
+                        <p id="uploadMainText">Нажмите для загрузки фото</p>
+                        <p class="input-hint" id="uploadHint">Можно загрузить до 10 фото (максимум 5MB каждое)</p>
                     </div>
                     <input type="file" id="photoInput" accept="image/*" multiple>
                     <div id="photoPreview"></div>
@@ -706,7 +709,7 @@
                 </div>
                 <div class="form-group" id="phoneInputGroup" style="display: none;">
                     <label for="phone">Введите номер телефона:</label>
-                    <input type="tel" id="phone" placeholder="+996 XXX XXX XXX" pattern="^\+996\d{9}$">
+                    <input type="tel" id="phone" placeholder="+996 XXX XXX XXX" pattern="\+996\d{9}">
                     <p class="input-hint">Формат: +996XXXYYYZZZ (без пробелов)</p>
                 </div>
                 <div class="navigation">
@@ -791,15 +794,16 @@
     </div>
 
     <script>
-        // Telegram Web App интеграция
-        const tg = window.Telegram.WebApp;
-        
-        // Инициализация Telegram Web App
-        tg.expand();
-        tg.enableClosingConfirmation();
-        tg.MainButton.hide();
-        tg.BackButton.hide();
-        
+        // Безопасная интеграция Telegram Web App
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+
+        if (tg) {
+            try { if (typeof tg.expand === 'function') tg.expand(); } catch(e){}
+            try { if (typeof tg.enableClosingConfirmation === 'function') tg.enableClosingConfirmation(); } catch(e){}
+            try { if (tg.MainButton && typeof tg.MainButton.hide === 'function') tg.MainButton.hide(); } catch(e){}
+            try { if (tg.BackButton && typeof tg.BackButton.hide === 'function') tg.BackButton.hide(); } catch(e){}
+        }
+
         // Глобальные переменные
         let formData = {
             photos: [],
@@ -809,23 +813,23 @@
             contacts: '',
             location: { type: 'none', address: 'Не указано' }
         };
-        
+
         let currentStep = 1;
         const totalSteps = 6;
         const MAX_PHOTOS = 10;
         const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
-        
+
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
             initApp();
             setupEventListeners();
             updateProgressBar();
+            updateUploadBlock(); // обновить upload area
         });
-        
-        // Инициализация приложения
+
         function initApp() {
-            // Определяем Telegram username
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            // Если есть Telegram и initDataUnsafe
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 const user = tg.initDataUnsafe.user;
                 if (user.username) {
                     formData.contacts = `@${user.username}`;
@@ -837,97 +841,109 @@
                 }
             } else {
                 console.warn('Telegram user data not available');
-                showNotification('Информация', 'Для автоматического заполнения контактов откройте приложение через Telegram бота.', 'info');
+                // Информационное уведомление, только если хотим:
+                // showNotification('Информация', 'Для автоматического заполнения контактов откройте приложение через Telegram бота.', 'info');
             }
-            
+
             // Настройка кнопки "Назад" в Telegram
-            tg.BackButton.onClick(handleTelegramBack);
+            if (tg && tg.BackButton && typeof tg.BackButton.onClick === 'function') {
+                try {
+                    tg.BackButton.onClick(handleTelegramBack);
+                } catch(e) { console.warn('BackButton.onClick error', e); }
+            }
         }
-        
-        // Настройка обработчиков событий
+
         function setupEventListeners() {
             // Загрузка фото
             document.getElementById('photoUpload').addEventListener('click', () => {
                 document.getElementById('photoInput').click();
             });
-            
+
             document.getElementById('photoInput').addEventListener('change', handlePhotoUpload);
-            
+
             // Автосохранение при вводе
-            document.getElementById('description').addEventListener('input', debounce(() => {
-                formData.description = document.getElementById('description').value;
-            }, 500));
-            
-            document.getElementById('price').addEventListener('input', debounce(() => {
-                formData.price = document.getElementById('price').value;
-            }, 300));
-            
-            document.getElementById('phone').addEventListener('input', debounce(() => {
-                if (formData.contact_type === 'phone') {
-                    formData.contacts = document.getElementById('phone').value;
-                }
-            }, 300));
-            
-            document.getElementById('locationInput').addEventListener('input', debounce(() => {
-                const value = document.getElementById('locationInput').value;
-                if (value) {
-                    formData.location = {
-                        type: 'address',
-                        address: value
-                    };
-                }
-            }, 500));
-            
+            const descEl = document.getElementById('description');
+            if (descEl) {
+                descEl.addEventListener('input', debounce(() => {
+                    formData.description = descEl.value;
+                }, 500));
+            }
+
+            const priceEl = document.getElementById('price');
+            if (priceEl) {
+                priceEl.addEventListener('input', debounce(() => {
+                    formData.price = priceEl.value;
+                }, 300));
+            }
+
+            const phoneEl = document.getElementById('phone');
+            if (phoneEl) {
+                phoneEl.addEventListener('input', debounce(() => {
+                    if (formData.contact_type === 'phone') {
+                        formData.contacts = phoneEl.value;
+                    }
+                }, 300));
+            }
+
+            const locEl = document.getElementById('locationInput');
+            if (locEl) {
+                locEl.addEventListener('input', debounce(() => {
+                    const value = locEl.value;
+                    if (value) {
+                        formData.location = {
+                            type: 'address',
+                            address: value
+                        };
+                    }
+                }, 500));
+            }
+
             // Обработка нажатия Enter в полях ввода
-            document.getElementById('description').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey && currentStep === 2) {
-                    e.preventDefault();
-                    nextStep();
-                }
-            });
-            
-            document.getElementById('price').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && currentStep === 3) {
-                    e.preventDefault();
-                    nextStep();
-                }
-            });
-            
-            document.getElementById('phone').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && currentStep === 4 && formData.contact_type === 'phone') {
-                    e.preventDefault();
-                    nextStep();
-                }
-            });
-            
-            document.getElementById('locationInput').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && currentStep === 5) {
-                    e.preventDefault();
-                    nextStep();
-                }
-            });
-        }
-        
-        // Обработка кнопки "Назад" в Telegram
-        function handleTelegramBack() {
-            if (currentStep > 1) {
-                prevStep();
-            } else {
-                tg.close();
+            if (descEl) {
+                descEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && currentStep === 2) {
+                        e.preventDefault();
+                        nextStep();
+                    }
+                });
+            }
+            if (priceEl) {
+                priceEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && currentStep === 3) {
+                        e.preventDefault();
+                        nextStep();
+                    }
+                });
+            }
+            if (phoneEl) {
+                phoneEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && currentStep === 4 && formData.contact_type === 'phone') {
+                        e.preventDefault();
+                        nextStep();
+                    }
+                });
+            }
+            if (locEl) {
+                locEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && currentStep === 5) {
+                        e.preventDefault();
+                        nextStep();
+                    }
+                });
             }
         }
-        
+
         // Показ уведомления
         function showNotification(title, message, type = 'error') {
             const notification = document.getElementById('notification');
             const notificationTitle = document.getElementById('notificationTitle');
             const notificationMessage = document.getElementById('notificationMessage');
-            const icon = notification.querySelector('.notification-icon');
-            
+            const icon = document.getElementById('notificationIcon');
+
             notificationTitle.textContent = title;
             notificationMessage.textContent = message;
-            
-            // Устанавливаем иконку в зависимости от типа
+
+            // Сбрасываем классы
             notification.className = 'notification';
             if (type === 'success') {
                 notification.classList.add('success');
@@ -939,29 +955,30 @@
             } else {
                 icon.className = 'fas fa-exclamation-circle notification-icon';
             }
-            
-            // Показываем уведомление
+
+            // Показываем уведомление плавно
+            notification.style.transform = 'translateX(-50%) translateY(0)';
             notification.classList.add('show');
-            
+
             // Скрываем через 4 секунды
             setTimeout(() => {
+                notification.style.transform = 'translateX(-50%) translateY(-100px)';
                 notification.classList.remove('show');
             }, 4000);
         }
-        
+
         // Обработка загрузки фото
         function handlePhotoUpload(event) {
             const files = Array.from(event.target.files);
-            const preview = document.getElementById('photoPreview');
             const currentCount = formData.photos.length;
-            
+
             // Проверка лимита фото
             if (currentCount + files.length > MAX_PHOTOS) {
                 showNotification('Ошибка', `Максимальное количество фото: ${MAX_PHOTOS}. У вас уже ${currentCount} фото.`);
                 event.target.value = '';
                 return;
             }
-            
+
             // Обработка каждого файла
             files.forEach(file => {
                 // Проверка размера
@@ -969,102 +986,112 @@
                     showNotification('Ошибка', `Фото "${file.name}" слишком большое (${(file.size/1024/1024).toFixed(1)}MB). Максимум 5MB.`);
                     return;
                 }
-                
+
                 // Проверка типа файла
                 if (!file.type.startsWith('image/')) {
                     showNotification('Ошибка', `Файл "${file.name}" не является изображением.`);
                     return;
                 }
-                
+
                 const reader = new FileReader();
-                
+
                 reader.onload = function(e) {
                     // Добавляем фото в данные
                     formData.photos.push(e.target.result);
-                    
+
                     // Создаем превью
                     createPhotoPreview(e.target.result, formData.photos.length - 1);
-                    
+
                     // Обновляем счетчик
-                    updatePhotoCounter();
+                    updateUploadBlock();
                 };
-                
+
                 reader.readAsDataURL(file);
             });
-            
+
             // Очищаем input
             event.target.value = '';
         }
-        
+
         // Создание превью фото
         function createPhotoPreview(dataUrl, index) {
             const preview = document.getElementById('photoPreview');
-            
+
             const photoItem = document.createElement('div');
             photoItem.className = 'photo-item';
             photoItem.setAttribute('data-index', index);
-            
+
             const img = document.createElement('img');
             img.src = dataUrl;
             img.alt = `Фото ${index + 1}`;
             img.loading = 'lazy';
-            
+
             const removeBtn = document.createElement('div');
             removeBtn.className = 'remove-photo';
             removeBtn.innerHTML = '×';
             removeBtn.setAttribute('aria-label', 'Удалить фото');
             removeBtn.onclick = (e) => {
                 e.stopPropagation();
-                removePhoto(index);
+                // Важно: пересчитать актуальный индекс по порядку в массиве
+                const idx = Number(photoItem.getAttribute('data-index'));
+                // Найдём позицию фотоItem среди детей, но лучше — искать элемент по совпадению src
+                const src = img.src;
+                const realIndex = formData.photos.findIndex(p => p === src);
+                if (realIndex !== -1) {
+                    removePhoto(realIndex);
+                } else {
+                    // fallback: удаляем по data-index
+                    removePhoto(idx);
+                }
             };
-            
+
             photoItem.appendChild(img);
             photoItem.appendChild(removeBtn);
             preview.appendChild(photoItem);
         }
-        
+
         // Удаление фото
         function removePhoto(index) {
             formData.photos.splice(index, 1);
             updatePhotoPreview();
-            updatePhotoCounter();
+            updateUploadBlock();
         }
-        
-        // Обновление всех превью фото
+
+        // Обновление всех превью фото (перерендер, чтобы индексы были корректны)
         function updatePhotoPreview() {
             const preview = document.getElementById('photoPreview');
             preview.innerHTML = '';
-            
+
             formData.photos.forEach((photo, index) => {
                 createPhotoPreview(photo, index);
             });
         }
-        
-        // Обновление счетчика фото
-        function updatePhotoCounter() {
-            const photoUpload = document.getElementById('photoUpload');
+
+        // Обновление upload-area без перезаписи контейнера
+        function updateUploadBlock() {
+            const icon = document.getElementById('uploadIcon');
+            const mainText = document.getElementById('uploadMainText');
+            const hint = document.getElementById('uploadHint');
             const photoCount = formData.photos.length;
-            
+
             if (photoCount > 0) {
-                photoUpload.innerHTML = `
-                    <i class="fas fa-check-circle photo-upload-icon" style="color: #34c759;"></i>
-                    <p>Загружено фото: ${photoCount}</p>
-                    <p class="input-hint">Можно добавить еще ${MAX_PHOTOS - photoCount} фото</p>
-                `;
+                icon.className = 'fas fa-check-circle photo-upload-icon';
+                icon.style.color = '#34c759';
+                mainText.textContent = `Загружено фото: ${photoCount}`;
+                hint.textContent = `Можно добавить еще ${MAX_PHOTOS - photoCount} фото`;
             } else {
-                photoUpload.innerHTML = `
-                    <i class="fas fa-cloud-upload-alt photo-upload-icon"></i>
-                    <p>Нажмите для загрузки фото</p>
-                    <p class="input-hint">Можно загрузить до ${MAX_PHOTOS} фото (максимум 5MB каждое)</p>
-                `;
+                icon.className = 'fas fa-cloud-upload-alt photo-upload-icon';
+                icon.style.color = '#667eea';
+                mainText.textContent = 'Нажмите для загрузки фото';
+                hint.textContent = `Можно загрузить до ${MAX_PHOTOS} фото (максимум 5MB каждое)`;
             }
         }
-        
+
         // Навигация по шагам
         function showStep(step) {
             // Сохраняем данные текущего шага
             saveCurrentStepData();
-            
+
             // Скрываем все шаги
             for (let i = 1; i <= totalSteps; i++) {
                 const stepElement = document.getElementById(`step${i}`);
@@ -1072,45 +1099,45 @@
                     stepElement.classList.remove('active');
                 }
             }
-            
+
             // Показываем текущий шаг
             const currentStepElement = document.getElementById(`step${step}`);
             if (currentStepElement) {
                 currentStepElement.classList.add('active');
             }
-            
+
             currentStep = step;
             updateProgressBar();
             updateTelegramButtons();
-            
+
             // Обновляем превью на последнем шаге
             if (step === 6) {
                 updatePreview();
             }
-            
+
             // Прокрутка к верху
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        
+
         // Следующий шаг
         function nextStep() {
             // Валидация текущего шага
             if (!validateStep(currentStep)) {
                 return;
             }
-            
+
             if (currentStep < totalSteps) {
                 showStep(currentStep + 1);
             }
         }
-        
+
         // Предыдущий шаг
         function prevStep() {
             if (currentStep > 1) {
                 showStep(currentStep - 1);
             }
         }
-        
+
         // Сохранение данных текущего шага
         function saveCurrentStepData() {
             switch(currentStep) {
@@ -1139,7 +1166,7 @@
                     break;
             }
         }
-        
+
         // Валидация шагов
         function validateStep(step) {
             switch(step) {
@@ -1188,6 +1215,12 @@
                         }
                         
                         formData.contacts = phone;
+                    } else {
+                        // Для телеграма — убедимся, что есть значение (может быть пустым)
+                        if (!formData.contacts) {
+                            showNotification('Ошибка', 'Пожалуйста, укажите контакт для связи (Telegram или телефон)');
+                            return false;
+                        }
                     }
                     break;
                     
@@ -1210,50 +1243,50 @@
             
             return true;
         }
-        
+
         // Выбор типа контактов
         function selectContactType(type) {
             formData.contact_type = type;
-            
+
             // Обновляем UI
             document.getElementById('telegramOption').classList.remove('active');
             document.getElementById('phoneOption').classList.remove('active');
             document.getElementById(`${type}Option`).classList.add('active');
-            
+
             // Показываем/скрываем поле для телефона
             const phoneInputGroup = document.getElementById('phoneInputGroup');
             phoneInputGroup.style.display = type === 'phone' ? 'block' : 'none';
-            
+
             // Если выбран Telegram, используем username если есть
-            if (type === 'telegram' && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            if (type === 'telegram' && tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 const username = tg.initDataUnsafe.user.username;
                 if (username) {
                     formData.contacts = `@${username}`;
                 }
             }
         }
-        
+
         // Получение геолокации
         function getCurrentLocation() {
             const locationBtn = document.getElementById('locationBtn');
             const originalText = locationBtn.innerHTML;
-            
+
             // Показываем индикатор загрузки
             locationBtn.innerHTML = '<div class="loader"></div> Определение...';
             locationBtn.disabled = true;
-            
+
             if (!navigator.geolocation) {
                 showNotification('Ошибка', 'Ваш браузер не поддерживает геолокацию');
                 resetLocationButton(locationBtn, originalText);
                 return;
             }
-            
+
             navigator.geolocation.getCurrentPosition(
                 // Успех
                 async function(position) {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
-                    
+
                     // Сохраняем координаты
                     formData.location = {
                         type: 'coordinates',
@@ -1261,8 +1294,8 @@
                         longitude: lng,
                         address: ''
                     };
-                    
-                    // Пытаемся получить адрес
+
+                    // Пытаемся получить адрес (без установки User-Agent)
                     try {
                         const address = await getAddressFromCoords(lat, lng);
                         if (address) {
@@ -1280,7 +1313,7 @@
                         document.getElementById('locationInput').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                         formData.location.address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                     }
-                    
+
                     // Включаем кнопку через 2 секунды
                     setTimeout(() => {
                         resetLocationButton(locationBtn, originalText);
@@ -1311,7 +1344,7 @@
                 }
             );
         }
-        
+
         // Сброс кнопки геолокации
         function resetLocationButton(button, originalText) {
             setTimeout(() => {
@@ -1319,26 +1352,25 @@
                 button.disabled = false;
             }, 1000);
         }
-        
-        // Получение адреса по координатам
+
+        // Получение адреса по координатам (без User-Agent)
         async function getAddressFromCoords(lat, lng) {
             try {
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
                     {
                         headers: {
-                            'User-Agent': 'FlowerMarketBot/1.0',
                             'Accept-Language': 'ru,en-US;q=0.9,en;q=0.8'
                         }
                     }
                 );
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 if (data.display_name) {
                     // Упрощаем адрес
                     const addressParts = data.display_name.split(',');
@@ -1347,22 +1379,22 @@
                     }
                     return data.display_name;
                 }
-                
+
                 return null;
             } catch (error) {
                 console.error('Error fetching address:', error);
                 return null;
             }
         }
-        
+
         // Обновление превью
         function updatePreview() {
             // Фото
             const previewPhotos = document.getElementById('previewPhotos');
             previewPhotos.innerHTML = '';
-            
+
             const photosToShow = formData.photos.slice(0, 6); // Показываем максимум 6 фото
-            
+
             photosToShow.forEach((photo, index) => {
                 const img = document.createElement('img');
                 img.className = 'photo-preview';
@@ -1371,7 +1403,7 @@
                 img.loading = 'lazy';
                 previewPhotos.appendChild(img);
             });
-            
+
             // Если фото больше 6, показываем счетчик
             if (formData.photos.length > 6) {
                 const moreCount = document.createElement('div');
@@ -1379,15 +1411,15 @@
                 moreCount.textContent = `+${formData.photos.length - 6}`;
                 previewPhotos.appendChild(moreCount);
             }
-            
+
             // Описание
             const previewDescription = document.getElementById('previewDescription');
             previewDescription.textContent = formData.description || 'Не указано';
-            
+
             // Цена
             const previewPrice = document.getElementById('previewPrice');
             previewPrice.textContent = formData.price || 'Не указана';
-            
+
             // Контакты
             const previewContacts = document.getElementById('previewContacts');
             let contactsText = '';
@@ -1397,7 +1429,7 @@
                 contactsText = `Телефон: ${formData.contacts || 'Не указано'}`;
             }
             previewContacts.textContent = contactsText;
-            
+
             // Локация
             const previewLocation = document.getElementById('previewLocation');
             let locationText = '';
@@ -1410,12 +1442,12 @@
             }
             previewLocation.textContent = locationText;
         }
-        
+
         // Обновление прогресс бара
         function updateProgressBar() {
             const stepNumbers = document.querySelectorAll('.step-number');
             const stepLabels = document.querySelectorAll('.step-label');
-            
+
             stepNumbers.forEach((number, index) => {
                 if (index + 1 === currentStep) {
                     number.classList.add('active');
@@ -1423,7 +1455,7 @@
                     number.classList.remove('active');
                 }
             });
-            
+
             stepLabels.forEach((label, index) => {
                 if (index + 1 <= currentStep) {
                     label.classList.add('active');
@@ -1432,79 +1464,100 @@
                 }
             });
         }
-        
-        // Обновление кнопок Telegram
+
+        // Обновление кнопок Telegram (безопасно)
         function updateTelegramButtons() {
-            if (currentStep > 1) {
-                tg.BackButton.show();
-            } else {
-                tg.BackButton.hide();
-            }
-            
-            // На последнем шаге показываем MainButton
-            if (currentStep === totalSteps) {
-                tg.MainButton.setText("Отправить объявление");
-                tg.MainButton.onClick(submitForm);
-                tg.MainButton.show();
-            } else {
-                tg.MainButton.hide();
-                tg.MainButton.offClick(submitForm);
+            try {
+                if (!tg) return;
+                if (currentStep > 1) {
+                    if (tg.BackButton && typeof tg.BackButton.show === 'function') tg.BackButton.show();
+                } else {
+                    if (tg.BackButton && typeof tg.BackButton.hide === 'function') tg.BackButton.hide();
+                }
+
+                if (currentStep === totalSteps) {
+                    if (tg.MainButton) {
+                        try {
+                            tg.MainButton.setText("Отправить объявление");
+                            tg.MainButton.onClick(submitForm);
+                            if (typeof tg.MainButton.show === 'function') tg.MainButton.show();
+                        } catch(e) { console.warn('MainButton methods error', e); }
+                    }
+                } else {
+                    if (tg.MainButton) {
+                        try {
+                            if (typeof tg.MainButton.hide === 'function') tg.MainButton.hide();
+                            if (typeof tg.MainButton.offClick === 'function') tg.MainButton.offClick(submitForm);
+                        } catch(e) { /* offClick может отсутствовать — игнорируем */ }
+                    }
+                }
+            } catch(e) {
+                console.warn('updateTelegramButtons error', e);
             }
         }
-        
+
         // Отправка формы
         async function submitForm() {
             // Финальная валидация
             if (!validateStep(currentStep)) {
                 return;
             }
-            
+
             const submitBtn = document.getElementById('submitBtn');
             const originalText = submitBtn.innerHTML;
-            
+
             // Показываем индикатор загрузки
             submitBtn.innerHTML = '<div class="loader"></div> Отправка...';
             submitBtn.disabled = true;
-            
-            // Показываем индикатор в Telegram
-            tg.MainButton.showProgress();
-            
+
+            // Показываем индикатор в Telegram (если есть)
+            if (tg && tg.MainButton && typeof tg.MainButton.showProgress === 'function') {
+                try { tg.MainButton.showProgress(); } catch(e) {}
+            }
+
             try {
                 // Проверяем наличие всех обязательных полей
                 if (!formData.description || !formData.price || !formData.contacts) {
                     throw new Error('Не все обязательные поля заполнены');
                 }
-                
+
                 // Формируем финальные данные
                 const finalData = {
                     ...formData,
                     timestamp: new Date().toISOString(),
-                    user_id: tg.initDataUnsafe?.user?.id || 'unknown',
-                    username: tg.initDataUnsafe?.user?.username || 'unknown'
+                    user_id: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 'unknown',
+                    username: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? (tg.initDataUnsafe.user.username || 'unknown') : 'unknown'
                 };
-                
-                // Отправляем данные в Telegram
-                tg.sendData(JSON.stringify(finalData));
-                
+
+                // Отправляем данные — если Telegram доступен, используем tg.sendData
+                if (tg && typeof tg.sendData === 'function') {
+                    tg.sendData(JSON.stringify(finalData));
+                } else {
+                    // Фолбэк — лог в консоль (или отправка на ваш сервер)
+                    console.log('Form data (fallback):', finalData);
+                }
+
                 // Показываем успешное сообщение
                 showNotification('Успешно', 'Объявление отправлено! Ожидайте подтверждения от администратора.', 'success');
-                
-                // Ждем 2 секунды и закрываем
+
+                // Закрываем WebApp через 2 сек, если есть tg.close
                 setTimeout(() => {
-                    tg.close();
+                    try { if (tg && typeof tg.close === 'function') tg.close(); } catch(e){}
                 }, 2000);
-                
+
             } catch (error) {
                 console.error('Error submitting form:', error);
                 showNotification('Ошибка отправки', 'Не удалось отправить объявление. Попробуйте еще раз.');
-                
+
                 // Возвращаем кнопку в исходное состояние
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
-                tg.MainButton.hideProgress();
+                if (tg && tg.MainButton && typeof tg.MainButton.hideProgress === 'function') {
+                    try { tg.MainButton.hideProgress(); } catch(e){}
+                }
             }
         }
-        
+
         // Вспомогательные функции
         function debounce(func, wait) {
             let timeout;
@@ -1517,20 +1570,19 @@
                 timeout = setTimeout(later, wait);
             };
         }
-        
+
         // Инициализация по умолчанию
         selectContactType('telegram');
-        
-        // Добавляем fallback для Font Awesome
-        document.fonts.load('16px "Font Awesome 6 Free"').then(() => {
+
+        // Добавляем fallback для Font Awesome (необязательно)
+        document.fonts && document.fonts.load && document.fonts.load('16px "Font Awesome 6 Free"').then(() => {
             console.log('Font Awesome loaded');
         }).catch(() => {
             console.log('Using fallback icons');
             addFallbackIcons();
         });
-        
+
         function addFallbackIcons() {
-            // Добавляем текстовые fallback для иконок
             const style = document.createElement('style');
             style.textContent = `
                 .fa-flower-tulip:before { content: "🌸"; }
@@ -1556,6 +1608,7 @@
             `;
             document.head.appendChild(style);
         }
+
     </script>
 </body>
 </html>
