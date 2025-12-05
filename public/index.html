@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Flower Market - Создать объявление</title>
+    <style>
+        /* Базовые стили */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        
+        /* Шапка */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding-top: env(safe-area-inset-top, 0);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        /* Форма */
+        .form-container {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        
+        /* Шаги */
+        .form-step {
+            display: none;
+            animation-duration: 0.3s;
+            animation-fill-mode: both;
+        }
+        
+        .form-step.active {
+            display: block;
+            animation-name: fadeInUp;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Заголовки шагов */
+        .step-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        /* Поля формы */
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+            font-weight: 500;
+            font-size: 15px;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        
+        .input-hint {
+            display: block;
+            margin-top: 8px;
+            color: #888;
+            font-size: 13px;
+        }
+        
+        /* Загрузка фото */
+        .photo-upload {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .photo-upload:hover, .photo-upload:active {
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .photo-upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        #photoInput {
+            display: none;
+        }
+        
+        /* Превью фото */
+        #photoPreview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .photo-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .photo-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .remove-photo {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(255, 59, 48, 0.9);
+            color: white;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.2s;
+            border: 2px solid white;
+        }
+        
+        .remove-photo:hover {
+            background: rgba(255, 59, 48, 1);
+        }
+        
+        /* Опции контактов */
+        .contact-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        @media (max-width: 480px) {
+            .contact-options {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .contact-option {
+            padding: 20px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+        
+        .contact-option:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .contact-option.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .contact-option i {
+            font-size: 28px;
+            margin-bottom: 12px;
+            display: block;
+        }
+        
+        .contact-option p {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .contact-option small {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        /* Карта/локация */
+        .location-map {
+            width: 100%;
+            height: 200px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .location-map i {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        /* Кнопки */
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn:after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .btn:hover:after, .btn:active:after {
+            opacity: 1;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            background-image: none;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        /* Навигация */
+        .navigation {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .navigation .btn {
+            flex: 1;
+        }
+        
+        /* Превью */
+        .preview-item {
+            background: rgba(102, 126, 234, 0.05);
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .preview-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .preview-value {
+            color: #333;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .photo-preview {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .photo-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        /* Прогресс бар */
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .progress-bar:before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.3);
+            z-index: 1;
+        }
+        
+        .progress-step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .step-number {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .step-number.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.3);
+        }
+        
+        .step-label {
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+            transition: color 0.3s;
+        }
+        
+        .step-label.active {
+            color: white;
+            font-weight: 500;
+        }
+        
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: transform 0.4s ease;
+            max-width: 90%;
+            width: 400px;
+        }
+        
+        .notification.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .notification-icon {
+            font-size: 22px;
+            color: #ff3b30;
+        }
+        
+        .notification.success .notification-icon {
+            color: #34c759;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        
+        .notification-message {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* Лоадер */
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 600px) {
+            body {
+                padding: 15px;
+            }
+            
+            .form-container {
+                padding: 20px;
+                border-radius: 16px;
+            }
+            
+            .step-title {
+                font-size: 18px;
+            }
+            
+            .photo-item {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .btn {
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+        }
+        
+        @media (max-width: 380px) {
+            .photos-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Анимация загрузки */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <!-- Прогресс бар -->
+    <div class="container">
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-step">
+                <div class="step-number active">1</div>
+                <div class="step-label active">Фото</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-number">2</div>
+                <div class="step-label">Описание</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-number">3</div>
+                <div class="step-label">Цена</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-number">4</div>
+                <div class="step-label">Контакты</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-number">5</div>
+                <div class="step-label">Локация</div>
+            </div>
+            <div class="progress-step">
+                <div class="step-number">6</div>
+                <div class="step-label">Превью</div>
+            </div>
+        </div>
+        
+        <div class="header">
+            <h1><i class="fas fa-flower-tulip"></i> Flower Market</h1>
+            <p>Создайте красивое объявление о продаже цветов</p>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div class="notification" id="notification">
+        <i class="fas fa-exclamation-circle notification-icon"></i>
+        <div class="notification-content">
+            <div class="notification-title" id="notificationTitle">Ошибка</div>
+            <div class="notification-message" id="notificationMessage"></div>
+        </div>
+    </div>
+
+    <!-- Форма -->
+    <div class="container">
+        <div class="form-container">
+            <!-- Шаг 1: Фото -->
+            <div class="form-step active" id="step1">
+                <h2 class="step-title"><i class="fas fa-camera"></i> Загрузите фото</h2>
+                <div class="form-group">
+                    <div class="photo-upload" id="photoUpload" role="button" aria-label="Загрузить фото">
+                        <i class="fas fa-cloud-upload-alt photo-upload-icon"></i>
+                        <p>Нажмите для загрузки фото</p>
+                        <p class="input-hint">Можно загрузить до 10 фото (максимум 5MB каждое)</p>
+                    </div>
+                    <input type="file" id="photoInput" accept="image/*" multiple>
+                    <div id="photoPreview"></div>
+                </div>
+                <div class="navigation">
+                    <button class="btn" onclick="nextStep()" id="nextBtn1">
+                        Далее <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Шаг 2: Описание -->
+            <div class="form-step" id="step2">
+                <h2 class="step-title"><i class="fas fa-edit"></i> Описание товара</h2>
+                <div class="form-group">
+                    <label for="description">Опишите ваш товар подробно:</label>
+                    <textarea id="description" placeholder="Например: Свежие розы из Эквадора, идеально подходят для свадебных букетов. Доставка по городу."></textarea>
+                    <p class="input-hint">Минимум 10 символов. Рекомендуем указать сорт, состояние, возможность доставки</p>
+                </div>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Назад
+                    </button>
+                    <button class="btn" onclick="nextStep()" id="nextBtn2">
+                        Далее <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Шаг 3: Цена -->
+            <div class="form-step" id="step3">
+                <h2 class="step-title"><i class="fas fa-tag"></i> Укажите цену</h2>
+                <div class="form-group">
+                    <label for="price">Цена в сомах:</label>
+                    <input type="text" id="price" placeholder="Например: 1500 или Договорная">
+                    <p class="input-hint">Можно указать диапазон: 1000-1500, или "Договорная"</p>
+                </div>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Назад
+                    </button>
+                    <button class="btn" onclick="nextStep()" id="nextBtn3">
+                        Далее <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Шаг 4: Контакты -->
+            <div class="form-step" id="step4">
+                <h2 class="step-title"><i class="fas fa-phone"></i> Контакты для связи</h2>
+                <div class="contact-options">
+                    <div class="contact-option active" id="telegramOption" onclick="selectContactType('telegram')" role="button">
+                        <i class="fab fa-telegram"></i>
+                        <p>Telegram</p>
+                        <small>Использовать мой username</small>
+                    </div>
+                    <div class="contact-option" id="phoneOption" onclick="selectContactType('phone')" role="button">
+                        <i class="fas fa-mobile-alt"></i>
+                        <p>Телефон</p>
+                        <small>Ввести номер</small>
+                    </div>
+                </div>
+                <div class="form-group" id="phoneInputGroup" style="display: none;">
+                    <label for="phone">Введите номер телефона:</label>
+                    <input type="tel" id="phone" placeholder="+996 XXX XXX XXX" pattern="^\+996\d{9}$">
+                    <p class="input-hint">Формат: +996XXXYYYZZZ (без пробелов)</p>
+                </div>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Назад
+                    </button>
+                    <button class="btn" onclick="nextStep()" id="nextBtn4">
+                        Далее <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Шаг 5: Локация -->
+            <div class="form-step" id="step5">
+                <h2 class="step-title"><i class="fas fa-map-marker-alt"></i> Локация</h2>
+                <div class="form-group">
+                    <div class="location-map" id="map">
+                        <i class="fas fa-map"></i>
+                        <p style="margin-top: 10px; font-size: 14px;">Ваше местоположение</p>
+                    </div>
+                    <label for="locationInput">Адрес или район:</label>
+                    <input type="text" id="locationInput" placeholder="Например: г. Бишкек, ул. Чуй, 123">
+                    <p class="input-hint" style="margin: 15px 0;">Или используйте текущую геолокацию:</p>
+                    <button class="btn btn-secondary" onclick="getCurrentLocation()" id="locationBtn">
+                        <i class="fas fa-location-crosshairs"></i> Использовать мое местоположение
+                    </button>
+                </div>
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Назад
+                    </button>
+                    <button class="btn" onclick="nextStep()" id="nextBtn5">
+                        Далее <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Шаг 6: Превью -->
+            <div class="form-step" id="step6">
+                <h2 class="step-title"><i class="fas fa-eye"></i> Превью объявления</h2>
+                
+                <div class="preview-item">
+                    <div class="preview-label">Фото</div>
+                    <div id="previewPhotos" class="photos-grid"></div>
+                </div>
+                
+                <div class="preview-item">
+                    <div class="preview-label">Описание</div>
+                    <div class="preview-value" id="previewDescription"></div>
+                </div>
+                
+                <div class="preview-item">
+                    <div class="preview-label">Цена</div>
+                    <div class="preview-value" id="previewPrice"></div>
+                </div>
+                
+                <div class="preview-item">
+                    <div class="preview-label">Контакты</div>
+                    <div class="preview-value" id="previewContacts"></div>
+                </div>
+                
+                <div class="preview-item">
+                    <div class="preview-label">Локация</div>
+                    <div class="preview-value" id="previewLocation"></div>
+                </div>
+                
+                <div class="preview-item">
+                    <div class="preview-label">Стоимость публикации</div>
+                    <div class="preview-value">50 сом</div>
+                </div>
+                
+                <div class="navigation">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Назад
+                    </button>
+                    <button class="btn" onclick="submitForm()" id="submitBtn">
+                        Отправить <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Telegram Web App интеграция
+        const tg = window.Telegram.WebApp;
+        
+        // Инициализация Telegram Web App
+        tg.expand();
+        tg.enableClosingConfirmation();
+        tg.MainButton.hide();
+        tg.BackButton.hide();
+        
+        // Глобальные переменные
+        let formData = {
+            photos: [],
+            description: '',
+            price: '',
+            contact_type: 'telegram',
+            contacts: '',
+            location: { type: 'none', address: 'Не указано' }
+        };
+        
+        let currentStep = 1;
+        const totalSteps = 6;
+        const MAX_PHOTOS = 10;
+        const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+            setupEventListeners();
+            updateProgressBar();
+        });
+        
+        // Инициализация приложения
+        function initApp() {
+            // Определяем Telegram username
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                if (user.username) {
+                    formData.contacts = `@${user.username}`;
+                    console.log('Telegram username detected:', user.username);
+                } else {
+                    // Если нет username, переключаем на телефон
+                    showNotification('Внимание', 'У вас нет username в Telegram. Пожалуйста, используйте телефон для связи.', 'warning');
+                    selectContactType('phone');
+                }
+            } else {
+                console.warn('Telegram user data not available');
+                showNotification('Информация', 'Для автоматического заполнения контактов откройте приложение через Telegram бота.', 'info');
+            }
+            
+            // Настройка кнопки "Назад" в Telegram
+            tg.BackButton.onClick(handleTelegramBack);
+        }
+        
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Загрузка фото
+            document.getElementById('photoUpload').addEventListener('click', () => {
+                document.getElementById('photoInput').click();
+            });
+            
+            document.getElementById('photoInput').addEventListener('change', handlePhotoUpload);
+            
+            // Автосохранение при вводе
+            document.getElementById('description').addEventListener('input', debounce(() => {
+                formData.description = document.getElementById('description').value;
+            }, 500));
+            
+            document.getElementById('price').addEventListener('input', debounce(() => {
+                formData.price = document.getElementById('price').value;
+            }, 300));
+            
+            document.getElementById('phone').addEventListener('input', debounce(() => {
+                if (formData.contact_type === 'phone') {
+                    formData.contacts = document.getElementById('phone').value;
+                }
+            }, 300));
+            
+            document.getElementById('locationInput').addEventListener('input', debounce(() => {
+                const value = document.getElementById('locationInput').value;
+                if (value) {
+                    formData.location = {
+                        type: 'address',
+                        address: value
+                    };
+                }
+            }, 500));
+            
+            // Обработка нажатия Enter в полях ввода
+            document.getElementById('description').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey && currentStep === 2) {
+                    e.preventDefault();
+                    nextStep();
+                }
+            });
+            
+            document.getElementById('price').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && currentStep === 3) {
+                    e.preventDefault();
+                    nextStep();
+                }
+            });
+            
+            document.getElementById('phone').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && currentStep === 4 && formData.contact_type === 'phone') {
+                    e.preventDefault();
+                    nextStep();
+                }
+            });
+            
+            document.getElementById('locationInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && currentStep === 5) {
+                    e.preventDefault();
+                    nextStep();
+                }
+            });
+        }
+        
+        // Обработка кнопки "Назад" в Telegram
+        function handleTelegramBack() {
+            if (currentStep > 1) {
+                prevStep();
+            } else {
+                tg.close();
+            }
+        }
+        
+        // Показ уведомления
+        function showNotification(title, message, type = 'error') {
+            const notification = document.getElementById('notification');
+            const notificationTitle = document.getElementById('notificationTitle');
+            const notificationMessage = document.getElementById('notificationMessage');
+            const icon = notification.querySelector('.notification-icon');
+            
+            notificationTitle.textContent = title;
+            notificationMessage.textContent = message;
+            
+            // Устанавливаем иконку в зависимости от типа
+            notification.className = 'notification';
+            if (type === 'success') {
+                notification.classList.add('success');
+                icon.className = 'fas fa-check-circle notification-icon';
+            } else if (type === 'warning') {
+                icon.className = 'fas fa-exclamation-triangle notification-icon';
+            } else if (type === 'info') {
+                icon.className = 'fas fa-info-circle notification-icon';
+            } else {
+                icon.className = 'fas fa-exclamation-circle notification-icon';
+            }
+            
+            // Показываем уведомление
+            notification.classList.add('show');
+            
+            // Скрываем через 4 секунды
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+        
+        // Обработка загрузки фото
+        function handlePhotoUpload(event) {
+            const files = Array.from(event.target.files);
+            const preview = document.getElementById('photoPreview');
+            const currentCount = formData.photos.length;
+            
+            // Проверка лимита фото
+            if (currentCount + files.length > MAX_PHOTOS) {
+                showNotification('Ошибка', `Максимальное количество фото: ${MAX_PHOTOS}. У вас уже ${currentCount} фото.`);
+                event.target.value = '';
+                return;
+            }
+            
+            // Обработка каждого файла
+            files.forEach(file => {
+                // Проверка размера
+                if (file.size > MAX_PHOTO_SIZE) {
+                    showNotification('Ошибка', `Фото "${file.name}" слишком большое (${(file.size/1024/1024).toFixed(1)}MB). Максимум 5MB.`);
+                    return;
+                }
+                
+                // Проверка типа файла
+                if (!file.type.startsWith('image/')) {
+                    showNotification('Ошибка', `Файл "${file.name}" не является изображением.`);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Добавляем фото в данные
+                    formData.photos.push(e.target.result);
+                    
+                    // Создаем превью
+                    createPhotoPreview(e.target.result, formData.photos.length - 1);
+                    
+                    // Обновляем счетчик
+                    updatePhotoCounter();
+                };
+                
+                reader.readAsDataURL(file);
+            });
+            
+            // Очищаем input
+            event.target.value = '';
+        }
+        
+        // Создание превью фото
+        function createPhotoPreview(dataUrl, index) {
+            const preview = document.getElementById('photoPreview');
+            
+            const photoItem = document.createElement('div');
+            photoItem.className = 'photo-item';
+            photoItem.setAttribute('data-index', index);
+            
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = `Фото ${index + 1}`;
+            img.loading = 'lazy';
+            
+            const removeBtn = document.createElement('div');
+            removeBtn.className = 'remove-photo';
+            removeBtn.innerHTML = '×';
+            removeBtn.setAttribute('aria-label', 'Удалить фото');
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                removePhoto(index);
+            };
+            
+            photoItem.appendChild(img);
+            photoItem.appendChild(removeBtn);
+            preview.appendChild(photoItem);
+        }
+        
+        // Удаление фото
+        function removePhoto(index) {
+            formData.photos.splice(index, 1);
+            updatePhotoPreview();
+            updatePhotoCounter();
+        }
+        
+        // Обновление всех превью фото
+        function updatePhotoPreview() {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
+            
+            formData.photos.forEach((photo, index) => {
+                createPhotoPreview(photo, index);
+            });
+        }
+        
+        // Обновление счетчика фото
+        function updatePhotoCounter() {
+            const photoUpload = document.getElementById('photoUpload');
+            const photoCount = formData.photos.length;
+            
+            if (photoCount > 0) {
+                photoUpload.innerHTML = `
+                    <i class="fas fa-check-circle photo-upload-icon" style="color: #34c759;"></i>
+                    <p>Загружено фото: ${photoCount}</p>
+                    <p class="input-hint">Можно добавить еще ${MAX_PHOTOS - photoCount} фото</p>
+                `;
+            } else {
+                photoUpload.innerHTML = `
+                    <i class="fas fa-cloud-upload-alt photo-upload-icon"></i>
+                    <p>Нажмите для загрузки фото</p>
+                    <p class="input-hint">Можно загрузить до ${MAX_PHOTOS} фото (максимум 5MB каждое)</p>
+                `;
+            }
+        }
+        
+        // Навигация по шагам
+        function showStep(step) {
+            // Сохраняем данные текущего шага
+            saveCurrentStepData();
+            
+            // Скрываем все шаги
+            for (let i = 1; i <= totalSteps; i++) {
+                const stepElement = document.getElementById(`step${i}`);
+                if (stepElement) {
+                    stepElement.classList.remove('active');
+                }
+            }
+            
+            // Показываем текущий шаг
+            const currentStepElement = document.getElementById(`step${step}`);
+            if (currentStepElement) {
+                currentStepElement.classList.add('active');
+            }
+            
+            currentStep = step;
+            updateProgressBar();
+            updateTelegramButtons();
+            
+            // Обновляем превью на последнем шаге
+            if (step === 6) {
+                updatePreview();
+            }
+            
+            // Прокрутка к верху
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // Следующий шаг
+        function nextStep() {
+            // Валидация текущего шага
+            if (!validateStep(currentStep)) {
+                return;
+            }
+            
+            if (currentStep < totalSteps) {
+                showStep(currentStep + 1);
+            }
+        }
+        
+        // Предыдущий шаг
+        function prevStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        }
+        
+        // Сохранение данных текущего шага
+        function saveCurrentStepData() {
+            switch(currentStep) {
+                case 1:
+                    // Фото уже сохранены
+                    break;
+                case 2:
+                    formData.description = document.getElementById('description').value.trim();
+                    break;
+                case 3:
+                    formData.price = document.getElementById('price').value.trim();
+                    break;
+                case 4:
+                    if (formData.contact_type === 'phone') {
+                        formData.contacts = document.getElementById('phone').value.trim();
+                    }
+                    break;
+                case 5:
+                    const locationInput = document.getElementById('locationInput').value.trim();
+                    if (locationInput) {
+                        formData.location = {
+                            type: 'address',
+                            address: locationInput
+                        };
+                    }
+                    break;
+            }
+        }
+        
+        // Валидация шагов
+        function validateStep(step) {
+            switch(step) {
+                case 1:
+                    if (formData.photos.length === 0) {
+                        showNotification('Ошибка', 'Пожалуйста, загрузите хотя бы одно фото');
+                        return false;
+                    }
+                    break;
+                    
+                case 2:
+                    const description = document.getElementById('description').value.trim();
+                    if (!description) {
+                        showNotification('Ошибка', 'Пожалуйста, напишите описание товара');
+                        return false;
+                    }
+                    if (description.length < 10) {
+                        showNotification('Ошибка', 'Описание должно содержать минимум 10 символов');
+                        return false;
+                    }
+                    formData.description = description;
+                    break;
+                    
+                case 3:
+                    const price = document.getElementById('price').value.trim();
+                    if (!price) {
+                        showNotification('Ошибка', 'Пожалуйста, укажите цену');
+                        return false;
+                    }
+                    formData.price = price;
+                    break;
+                    
+                case 4:
+                    if (formData.contact_type === 'phone') {
+                        const phone = document.getElementById('phone').value.trim();
+                        const phoneRegex = /^\+996\d{9}$/;
+                        
+                        if (!phone) {
+                            showNotification('Ошибка', 'Пожалуйста, введите номер телефона');
+                            return false;
+                        }
+                        
+                        if (!phoneRegex.test(phone)) {
+                            showNotification('Ошибка', 'Пожалуйста, введите корректный номер телефона в формате +996XXXXXXXXX');
+                            return false;
+                        }
+                        
+                        formData.contacts = phone;
+                    }
+                    break;
+                    
+                case 5:
+                    const locationInput = document.getElementById('locationInput').value.trim();
+                    if (locationInput) {
+                        formData.location = {
+                            type: 'address',
+                            address: locationInput
+                        };
+                    } else if (!formData.location.address || formData.location.address === 'Не указано') {
+                        // Можно пропустить локацию
+                        formData.location = {
+                            type: 'none',
+                            address: 'Не указано'
+                        };
+                    }
+                    break;
+            }
+            
+            return true;
+        }
+        
+        // Выбор типа контактов
+        function selectContactType(type) {
+            formData.contact_type = type;
+            
+            // Обновляем UI
+            document.getElementById('telegramOption').classList.remove('active');
+            document.getElementById('phoneOption').classList.remove('active');
+            document.getElementById(`${type}Option`).classList.add('active');
+            
+            // Показываем/скрываем поле для телефона
+            const phoneInputGroup = document.getElementById('phoneInputGroup');
+            phoneInputGroup.style.display = type === 'phone' ? 'block' : 'none';
+            
+            // Если выбран Telegram, используем username если есть
+            if (type === 'telegram' && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const username = tg.initDataUnsafe.user.username;
+                if (username) {
+                    formData.contacts = `@${username}`;
+                }
+            }
+        }
+        
+        // Получение геолокации
+        function getCurrentLocation() {
+            const locationBtn = document.getElementById('locationBtn');
+            const originalText = locationBtn.innerHTML;
+            
+            // Показываем индикатор загрузки
+            locationBtn.innerHTML = '<div class="loader"></div> Определение...';
+            locationBtn.disabled = true;
+            
+            if (!navigator.geolocation) {
+                showNotification('Ошибка', 'Ваш браузер не поддерживает геолокацию');
+                resetLocationButton(locationBtn, originalText);
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                // Успех
+                async function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Сохраняем координаты
+                    formData.location = {
+                        type: 'coordinates',
+                        latitude: lat,
+                        longitude: lng,
+                        address: ''
+                    };
+                    
+                    // Пытаемся получить адрес
+                    try {
+                        const address = await getAddressFromCoords(lat, lng);
+                        if (address) {
+                            formData.location.address = address;
+                            document.getElementById('locationInput').value = address;
+                            locationBtn.innerHTML = '<i class="fas fa-check"></i> Адрес определен';
+                        } else {
+                            locationBtn.innerHTML = '<i class="fas fa-check"></i> Координаты получены';
+                            document.getElementById('locationInput').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                            formData.location.address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        }
+                    } catch (error) {
+                        console.error('Error getting address:', error);
+                        locationBtn.innerHTML = '<i class="fas fa-check"></i> Координаты получены';
+                        document.getElementById('locationInput').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        formData.location.address = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    }
+                    
+                    // Включаем кнопку через 2 секунды
+                    setTimeout(() => {
+                        resetLocationButton(locationBtn, originalText);
+                    }, 2000);
+                },
+                // Ошибка
+                function(error) {
+                    let errorMessage = 'Не удалось получить местоположение';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Вы отказали в доступе к геолокации. Разрешите доступ в настройках браузера.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Информация о местоположении недоступна. Проверьте подключение к интернету.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Время ожидания истекло. Попробуйте еще раз.';
+                            break;
+                    }
+                    showNotification('Ошибка геолокации', errorMessage);
+                    resetLocationButton(locationBtn, originalText);
+                },
+                // Опции
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        // Сброс кнопки геолокации
+        function resetLocationButton(button, originalText) {
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 1000);
+        }
+        
+        // Получение адреса по координатам
+        async function getAddressFromCoords(lat, lng) {
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'FlowerMarketBot/1.0',
+                            'Accept-Language': 'ru,en-US;q=0.9,en;q=0.8'
+                        }
+                    }
+                );
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.display_name) {
+                    // Упрощаем адрес
+                    const addressParts = data.display_name.split(',');
+                    if (addressParts.length > 3) {
+                        return addressParts.slice(0, 3).join(', ');
+                    }
+                    return data.display_name;
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Error fetching address:', error);
+                return null;
+            }
+        }
+        
+        // Обновление превью
+        function updatePreview() {
+            // Фото
+            const previewPhotos = document.getElementById('previewPhotos');
+            previewPhotos.innerHTML = '';
+            
+            const photosToShow = formData.photos.slice(0, 6); // Показываем максимум 6 фото
+            
+            photosToShow.forEach((photo, index) => {
+                const img = document.createElement('img');
+                img.className = 'photo-preview';
+                img.src = photo;
+                img.alt = `Фото ${index + 1}`;
+                img.loading = 'lazy';
+                previewPhotos.appendChild(img);
+            });
+            
+            // Если фото больше 6, показываем счетчик
+            if (formData.photos.length > 6) {
+                const moreCount = document.createElement('div');
+                moreCount.className = 'photo-preview photo-more';
+                moreCount.textContent = `+${formData.photos.length - 6}`;
+                previewPhotos.appendChild(moreCount);
+            }
+            
+            // Описание
+            const previewDescription = document.getElementById('previewDescription');
+            previewDescription.textContent = formData.description || 'Не указано';
+            
+            // Цена
+            const previewPrice = document.getElementById('previewPrice');
+            previewPrice.textContent = formData.price || 'Не указана';
+            
+            // Контакты
+            const previewContacts = document.getElementById('previewContacts');
+            let contactsText = '';
+            if (formData.contact_type === 'telegram') {
+                contactsText = `Telegram: ${formData.contacts || 'Не указано'}`;
+            } else {
+                contactsText = `Телефон: ${formData.contacts || 'Не указано'}`;
+            }
+            previewContacts.textContent = contactsText;
+            
+            // Локация
+            const previewLocation = document.getElementById('previewLocation');
+            let locationText = '';
+            if (formData.location.type === 'coordinates') {
+                locationText = `📍 Геолокация: ${formData.location.address || 'Координаты получены'}`;
+            } else if (formData.location.type === 'address') {
+                locationText = `📍 Адрес: ${formData.location.address}`;
+            } else {
+                locationText = '📍 Не указана';
+            }
+            previewLocation.textContent = locationText;
+        }
+        
+        // Обновление прогресс бара
+        function updateProgressBar() {
+            const stepNumbers = document.querySelectorAll('.step-number');
+            const stepLabels = document.querySelectorAll('.step-label');
+            
+            stepNumbers.forEach((number, index) => {
+                if (index + 1 === currentStep) {
+                    number.classList.add('active');
+                } else {
+                    number.classList.remove('active');
+                }
+            });
+            
+            stepLabels.forEach((label, index) => {
+                if (index + 1 <= currentStep) {
+                    label.classList.add('active');
+                } else {
+                    label.classList.remove('active');
+                }
+            });
+        }
+        
+        // Обновление кнопок Telegram
+        function updateTelegramButtons() {
+            if (currentStep > 1) {
+                tg.BackButton.show();
+            } else {
+                tg.BackButton.hide();
+            }
+            
+            // На последнем шаге показываем MainButton
+            if (currentStep === totalSteps) {
+                tg.MainButton.setText("Отправить объявление");
+                tg.MainButton.onClick(submitForm);
+                tg.MainButton.show();
+            } else {
+                tg.MainButton.hide();
+                tg.MainButton.offClick(submitForm);
+            }
+        }
+        
+        // Отправка формы
+        async function submitForm() {
+            // Финальная валидация
+            if (!validateStep(currentStep)) {
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            // Показываем индикатор загрузки
+            submitBtn.innerHTML = '<div class="loader"></div> Отправка...';
+            submitBtn.disabled = true;
+            
+            // Показываем индикатор в Telegram
+            tg.MainButton.showProgress();
+            
+            try {
+                // Проверяем наличие всех обязательных полей
+                if (!formData.description || !formData.price || !formData.contacts) {
+                    throw new Error('Не все обязательные поля заполнены');
+                }
+                
+                // Формируем финальные данные
+                const finalData = {
+                    ...formData,
+                    timestamp: new Date().toISOString(),
+                    user_id: tg.initDataUnsafe?.user?.id || 'unknown',
+                    username: tg.initDataUnsafe?.user?.username || 'unknown'
+                };
+                
+                // Отправляем данные в Telegram
+                tg.sendData(JSON.stringify(finalData));
+                
+                // Показываем успешное сообщение
+                showNotification('Успешно', 'Объявление отправлено! Ожидайте подтверждения от администратора.', 'success');
+                
+                // Ждем 2 секунды и закрываем
+                setTimeout(() => {
+                    tg.close();
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                showNotification('Ошибка отправки', 'Не удалось отправить объявление. Попробуйте еще раз.');
+                
+                // Возвращаем кнопку в исходное состояние
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                tg.MainButton.hideProgress();
+            }
+        }
+        
+        // Вспомогательные функции
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // Инициализация по умолчанию
+        selectContactType('telegram');
+        
+        // Добавляем fallback для Font Awesome
+        document.fonts.load('16px "Font Awesome 6 Free"').then(() => {
+            console.log('Font Awesome loaded');
+        }).catch(() => {
+            console.log('Using fallback icons');
+            addFallbackIcons();
+        });
+        
+        function addFallbackIcons() {
+            // Добавляем текстовые fallback для иконок
+            const style = document.createElement('style');
+            style.textContent = `
+                .fa-flower-tulip:before { content: "🌸"; }
+                .fa-camera:before { content: "📸"; }
+                .fa-edit:before { content: "✏️"; }
+                .fa-tag:before { content: "💰"; }
+                .fa-phone:before { content: "📞"; }
+                .fa-map-marker-alt:before { content: "📍"; }
+                .fa-eye:before { content: "👁️"; }
+                .fa-cloud-upload-alt:before { content: "📤"; }
+                .fa-arrow-right:before { content: "→"; }
+                .fa-arrow-left:before { content: "←"; }
+                .fa-paper-plane:before { content: "✈️"; }
+                .fa-location-crosshairs:before { content: "🎯"; }
+                .fa-check:before { content: "✓"; }
+                .fa-exclamation-circle:before { content: "⚠️"; }
+                .fa-check-circle:before { content: "✅"; }
+                .fa-exclamation-triangle:before { content: "⚠️"; }
+                .fa-info-circle:before { content: "ℹ️"; }
+                .fa-map:before { content: "🗺️"; }
+                .fab.fa-telegram:before { content: "✈️"; font-family: inherit; }
+                .fa-mobile-alt:before { content: "📱"; }
+            `;
+            document.head.appendChild(style);
+        }
+    </script>
+</body>
+</html>

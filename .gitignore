@@ -1,0 +1,26 @@
+# Создайте файл .gitignore в корне flowers-market-bot/
+echo "__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
+*.sqlite3
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
+node_modules/
+bot/.env" > flowers-market-bot/.gitignore
