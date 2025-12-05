@@ -1,1 +1,1 @@
-# flowers-telegram-app
+# tg-app
